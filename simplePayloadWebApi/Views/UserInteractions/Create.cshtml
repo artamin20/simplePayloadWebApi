@@ -1,0 +1,74 @@
+﻿@{
+    ViewData["Title"] = "Send User Interactions";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<div class="form-group">
+    <label for="requestCount">Number of Requests (max 10000):</label>
+    <input type="number" id="requestCount" value="10" max="10000" min="1" class="form-control" />
+</div>
+
+<div class="form-group">
+    <label>
+        <input type="checkbox" id="useRandomNames" /> Use Random Names
+    </label>
+</div>
+
+<div class="form-group">
+    <button id="sendBtn" class="btn btn-success">Send Requests</button>
+</div>
+
+<div id="progress" style="margin-top:15px;"></div>
+
+@section Scripts {
+    <script>
+    const names = ["Ali", "Sara", "Reza", "John", "Mina", "Zahra", "Tom", "Lina", "Javad", "Elham"];
+    const countries = ["Iran", "Germany", "USA", "France", "Brazil", "India", "China", "Japan", "Italy", "Canada", "Russia", "UK", "Spain", "Egypt", "Turkey", "South Korea", "Iraq", "Afghanistan", "Pakistan", "UAE", "Argentina", "Mexico", "Indonesia", "Malaysia", "Australia"];
+
+    document.getElementById("sendBtn").addEventListener("click", async () => {
+        const count = Math.min(parseInt(document.getElementById("requestCount").value) || 0, 10000);
+        const useRandom = document.getElementById("useRandomNames").checked;
+        const progressDiv = document.getElementById("progress");
+        if (count <= 0) {
+            alert("Please enter a valid number between 1 and 10000.");
+            return;
+        }
+
+        let data = [];
+        for (let i = 0; i < count; i++) {
+            data.push({
+                name: useRandom
+                    ? names[Math.floor(Math.random() * names.length)]
+                    : "User" + (i + 1),
+                country: countries[Math.floor(Math.random() * countries.length)],
+                device: navigator.userAgent,
+                os: navigator.platform,
+                ip: "0.0.0.0", // backend can override
+                location: "unknown",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        progressDiv.innerText = "Sending data... please wait.";
+
+        try {
+            const response = await fetch("/api/UserTrack/bulk", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                progressDiv.innerText = `Error: ${response.status} - ${response.statusText}`;
+                return;
+            }
+
+            const result = await response.json();
+            progressDiv.innerText = `Successfully sent ${result.count} records.`;
+        } catch (ex) {
+            progressDiv.innerText = "Error sending data: " + ex.message;
+        }
+    });
+    </script>
+}
